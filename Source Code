@@ -1,0 +1,106 @@
+//On Linux
+#include <iostream>
+#include <vector>
+#include <unordered_map>
+
+using namespace std;
+
+// Represents a variable
+struct Variable {
+    int id;
+    bool value;
+};
+
+// Represents a clause
+struct Clause {
+    vector<Variable> variables;
+};
+
+// Represents a CNF formula
+struct Formula {
+    vector<Clause> clauses;
+};
+
+
+// Evaluates a clause given an assignment of values to variables
+string evaluateClause(Clause c, unordered_map<int, bool> assignment) {
+    for (Variable v : c.variables) {
+        if (assignment[v.id] == v.value) {
+            return "SAT";
+        }
+    }
+    return "UNSAT";
+}
+
+// Evaluates a CNF formula given an assignment of values to variables
+string evaluateFormula(Formula f, unordered_map<int, bool> assignment) {
+    for (Clause c : f.clauses) {
+        if (evaluateClause(c, assignment) == "UNSAT") {
+            return "UNSAT";
+        }
+    }
+    return "SAT";
+}
+
+// Finds a satisfying assignment to a CNF formula using the DPLL algorithm
+unordered_map<int, bool> dpll(Formula f) {
+    unordered_map<int, bool> assignment;
+
+    // Find a literal with the highest frequency
+    unordered_map<int, int> literalFreq;
+    for (Clause c : f.clauses) {
+        for (Variable v : c.variables) {
+            literalFreq[v.id]++;
+        }
+    }
+    int maxFreq = 0;
+    Variable maxFreqLiteral;
+    for (auto kv : literalFreq) {
+        if (kv.second > maxFreq) {
+            maxFreq = kv.second;
+            maxFreqLiteral.id = kv.first;
+        }
+    }
+
+    // Try assigning true to the literal with the highest frequency
+    assignment[maxFreqLiteral.id] = true;
+    if (evaluateFormula(f, assignment) == "SAT") {
+        return assignment;
+    }
+
+    // Try assigning false to the literal with the highest frequency
+    assignment[maxFreqLiteral.id] = false;
+    if (evaluateFormula(f, assignment) == "SAT") {
+        return assignment;
+    }
+
+    // If neither value works, backtrack and try another literal
+    assignment.erase(maxFreqLiteral.id);
+    return dpll(f);
+}
+
+int main() {
+    // Create sample CNF formula
+    Formula f;
+    Clause c1;
+    c1.variables.push_back({1, true});
+    c1.variables.push_back({2, true});
+    f.clauses.push_back(c1);
+    Clause c2;
+    c2.variables.push_back({1, false});
+    c2.variables.push_back({3, true});
+    f.clauses.push_back(c2);
+    Clause c3;
+    c3.variables.push_back({2, false});
+    c3.variables.push_back({3, false});
+    f.clauses.push_back(c3);
+
+    // Print out satisfying assignment
+    unordered_map<int, bool> assignment = dpll(f);
+    cout << "Satisfying assignment: " << evaluateFormula(f, assignment) << endl;
+    for (auto kv : assignment) {
+        cout << "x" << kv.first << " = " << kv.second << endl;
+    }
+
+    return 0;
+}
